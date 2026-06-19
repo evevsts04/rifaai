@@ -3,7 +3,7 @@ import {
   Ticket, PlusCircle, Users, ArrowLeft, 
   CheckCircle, TrendingUp, User, Phone, X, 
   Award, Copy, Trash2, ExternalLink,
-  ShoppingCart, AlertCircle, Lock, LogOut
+  ShoppingCart, AlertCircle, Lock, LogOut, Sparkles, Bot
 } from 'lucide-react';
 
 // --- Importações do Firebase ---
@@ -38,7 +38,8 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 // Define o caminho do banco de dados (Suporta o simulador e o seu projeto real)
 const getRafflesCol = () => {
   if (typeof __firebase_config !== 'undefined') {
-    return collection(db, 'artifacts', appId, 'public', 'data', 'raffles');
+    // FIX: Ensure the path always has an odd number of segments to be a valid collection
+    return collection(db, 'artifacts', appId, 'public_data', 'raffles_data', 'raffles');
   }
   return collection(db, 'raffles');
 };
@@ -277,6 +278,67 @@ const CreateRaffle = ({ onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     title: '', description: '', prize: '', price: '', totalTickets: 100, type: 'numbers', maxPerUser: 0
   });
+  const [showAI, setShowAI] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiError, setAiError] = useState('');
+
+  const handleAIGeneration = async () => {
+    if (!aiPrompt.trim()) return;
+    setIsGenerating(true);
+    setAiError('');
+    try {
+      const payload = {
+        contents: [{ parts: [{ text: aiPrompt }] }],
+        generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: "OBJECT",
+                properties: {
+                    title: { type: "STRING" },
+                    prize: { type: "STRING" },
+                    description: { type: "STRING" },
+                    price: { type: "NUMBER" },
+                    type: { type: "STRING", enum: ["numbers", "names"] },
+                    totalTickets: { type: "NUMBER" }
+                },
+                required: ["title", "prize", "description", "price", "type", "totalTickets"]
+            }
+        },
+        systemInstruction: {
+          parts: [{ text: "Você é um assistente especialista em criar campanhas de rifas digitais otimizadas para vendas. Baseado no motivo, prêmio ou objetivo fornecido pelo usuário, gere: 1. Um título muito cativante e curto. 2. O nome do prêmio. 3. Uma descrição altamente persuasiva com quebras de linha e uso de emojis para engajar os compradores. 4. Um preço acessível sugerido (como 5, 10, ou 15). 5. O tipo ideal ('numbers' para coisas maiores ou 'names' para coisas menores). 6. Quantidade de bilhetes (exatamente 50, 100, 200, 500 ou 1000)." }]
+        }
+      };
+      
+      const apiKey = ""; 
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+      
+      const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const result = await response.json();
+      
+      if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
+         const parsed = JSON.parse(result.candidates[0].content.parts[0].text);
+         setFormData({
+            title: parsed.title || '',
+            prize: parsed.prize || '',
+            description: parsed.description || '',
+            price: parsed.price || '',
+            type: parsed.type === 'names' ? 'names' : 'numbers',
+            totalTickets: [50, 100, 200, 500, 1000].includes(parsed.totalTickets) ? parsed.totalTickets : 100,
+            maxPerUser: formData.maxPerUser
+         });
+         setShowAI(false);
+         setAiPrompt('');
+      } else {
+         setAiError("Não conseguimos gerar as informações. Tente outro texto.");
+      }
+    } catch (err) {
+      console.error(err);
+      setAiError("Ocorreu um erro ao conectar com o serviço de IA.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -307,6 +369,42 @@ const CreateRaffle = ({ onSave, onCancel }) => {
         <Button variant="ghost" onClick={onCancel} className="!p-2"><ArrowLeft size={20} /></Button>
         <h2 className="text-2xl font-bold text-gray-800">Criar Nova Rifa</h2>
       </div>
+
+      {!showAI && (
+        <div className="mb-6 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-2xl border border-indigo-100 flex flex-col sm:flex-row gap-4 items-center justify-between">
+           <div>
+              <h3 className="font-bold text-indigo-900 flex items-center gap-2"><Sparkles size={18} className="text-purple-600"/> Sem tempo ou ideias?</h3>
+              <p className="text-sm text-indigo-700 mt-1">Deixe a Inteligência Artificial criar uma rifa perfeitamente otimizada para você e pronta para vender.</p>
+           </div>
+           <Button onClick={() => setShowAI(true)} className="bg-purple-600 hover:bg-purple-700 text-white border-transparent flex-shrink-0">
+              <Bot size={18} /> Preencher com IA
+           </Button>
+        </div>
+      )}
+
+      {showAI && (
+         <div className="mb-6 bg-purple-50 p-6 rounded-2xl border border-purple-200 shadow-sm transition-all">
+            <div className="flex justify-between items-center mb-3">
+               <h3 className="font-bold text-purple-900 flex items-center gap-2"><Bot size={18} /> Assistente Inteligente</h3>
+               <button onClick={() => setShowAI(false)} className="text-purple-400 hover:text-purple-700 transition-colors"><X size={18}/></button>
+            </div>
+            <p className="text-sm text-purple-700 mb-4">
+              Descreva rapidamente o motivo da sua rifa ou o prêmio. Ex: <i>"Arrecadar fundos para a minha festa de formatura, sorteando um relógio de pulso."</i> ou <i>"Ajudar nos custos veterinários da minha gatinha."</i>
+            </p>
+            <textarea 
+              rows="3" 
+              className="w-full border border-purple-200 rounded-xl px-4 py-3 mb-3 focus:ring-2 focus:ring-purple-500 outline-none resize-none"
+              placeholder="Do que se trata a sua rifa?"
+              value={aiPrompt}
+              onChange={e => setAiPrompt(e.target.value)}
+              disabled={isGenerating}
+            />
+            {aiError && <p className="text-red-500 text-sm mb-3 flex items-center gap-1"><AlertCircle size={14}/> {aiError}</p>}
+            <Button onClick={handleAIGeneration} disabled={isGenerating || !aiPrompt.trim()} className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+               {isGenerating ? '🌟 Criando mágica...' : 'Gerar Detalhes da Rifa'}
+            </Button>
+         </div>
+      )}
 
       <Card>
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -396,12 +494,14 @@ const AdminRaffle = ({ raffle, onBack, onOpenPublicView, onUpdateTicketStatus, o
   const potentialRevenue = raffle.totalTickets * raffle.price;
 
   const handleCopyLink = () => {
-    // Ajustado para funcionar em produção (copia a URL atual)
-    const url = window.location.href;
+    // Monta o link único apontando para a página atual, adicionando o ID da rifa
+    const shareUrl = `${window.location.origin}${window.location.pathname}?raffle=${raffle.id}`;
     if (navigator.clipboard) {
-        navigator.clipboard.writeText(url).then(() => {
-            setToastMessage('Link copiado!');
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            setToastMessage('Link copiado! Agora é só compartilhar.');
             setTimeout(() => setToastMessage(''), 3000);
+        }).catch(err => {
+            console.error('Falha ao copiar:', err);
         });
     }
   };
@@ -682,12 +782,14 @@ const PublicRaffleView = ({ raffle, onReserve, onBack }) => {
 export default function App() {
   const [currentView, setCurrentView] = useState('publicList');
   const [activeRaffleId, setActiveRaffleId] = useState(null);
+  const [initialRaffleLoaded, setInitialRaffleLoaded] = useState(false);
   
   // Estados do Firebase
   const [raffles, setRaffles] = useState([]);
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState('');
 
   // 1. Inicializa a Autenticação
   useEffect(() => {
@@ -704,6 +806,9 @@ export default function App() {
         }
       } catch (error) {
         console.error("Erro de autenticação:", error);
+        // FIX: Ensure we only store the string message, not the entire Error object
+        setAuthError(error?.message || "Erro desconhecido ao conectar ao Firebase.");
+        setLoading(false); // Para o loading infinito em caso de erro
       }
     };
     initAuth();
@@ -737,13 +842,25 @@ export default function App() {
       rafflesData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setRaffles(rafflesData);
       setLoading(false);
+
+      // Trata o carregamento inicial de link direto (ex: site.com/?raffle=123)
+      if (!initialRaffleLoaded) {
+         const params = new URLSearchParams(window.location.search);
+         const raffleIdFromUrl = params.get('raffle');
+         if (raffleIdFromUrl && rafflesData.find(r => r.id === raffleIdFromUrl)) {
+             setActiveRaffleId(raffleIdFromUrl);
+             setCurrentView('publicRaffle');
+         }
+         setInitialRaffleLoaded(true);
+      }
+
     }, (error) => {
       console.error("Erro ao buscar rifas:", error);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, initialRaffleLoaded]);
 
   // Ações do Firebase
   const handleCreateRaffle = async (newRaffle) => {
@@ -763,6 +880,7 @@ export default function App() {
       setCurrentView('dashboard');
     } catch (e) {
       console.error("Erro ao deletar:", e);
+      alert("Erro ao excluir rifa: " + (e?.message || "Erro desconhecido"));
     }
   };
 
@@ -791,25 +909,21 @@ export default function App() {
     if (!raffle) return;
 
     const updatedTickets = raffle.tickets.map(t => 
-      t.number === ticketNumber ? { ...t, status: newStatus, buyerName: '', buyerPhone: '' } : t
+  if (authError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
+        <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center border-t-4 border-red-500">
+           <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
+           <h2 className="text-xl font-bold text-gray-800 mb-2">Erro de Configuração</h2>
+           <p className="text-gray-600 mb-4 text-sm">
+             O Firebase bloqueou a conexão. Certifique-se de ativar o provedor de login <strong>Anônimo</strong> no painel de Authentication.
+           </p>
+           <div className="bg-gray-100 p-3 rounded text-xs text-left text-gray-500 overflow-auto break-all">
+             {authError}
+           </div>
+        </div>
+      </div>
     );
-
-    try {
-      await updateDoc(doc(getRafflesCol(), raffleId), { tickets: updatedTickets });
-    } catch (e) {
-      console.error("Erro ao atualizar status:", e);
-    }
-  };
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    // Volta a ser um usuário anônimo
-    await signInAnonymously(auth);
-  };
-
-  // Renderização principal
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-indigo-600 font-bold">Carregando sistema...</div>;
   }
 
   // Se for a tela de visualização pública completa, removemos o cabeçalho padrão
@@ -818,7 +932,11 @@ export default function App() {
       <PublicRaffleView 
         raffle={raffles.find(r => r.id === activeRaffleId)} 
         onReserve={handleReserveTicket}
-        onBack={() => setCurrentView(isAdmin ? 'adminRaffle' : 'publicList')}
+        onBack={() => {
+          // Limpa o parâmetro da URL ao clicar em voltar
+          window.history.pushState({}, '', window.location.pathname);
+          setCurrentView(isAdmin ? 'adminRaffle' : 'publicList');
+        }}
       />
     );
   }
