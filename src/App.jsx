@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from 'react';
 import { 
   Ticket, PlusCircle, Users, ArrowLeft, 
@@ -8,7 +6,6 @@ import {
   ShoppingCart, AlertCircle
 } from 'lucide-react';
 
-// --- Utilitários ---
 const BR_NAMES = [
   "Alice", "Miguel", "Sophia", "Arthur", "Helena", "Davi", "Valentina", "Heitor", "Laura", "Gabriel",
   "Isabella", "Bernardo", "Manuela", "Lorenzo", "Júlia", "Enzo", "Heloísa", "Pedro", "Luiza", "Lucas",
@@ -31,7 +28,6 @@ const formatCurrency = (value) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 };
 
-// --- Componentes Compartilhados ---
 const Button = ({ children, onClick, variant = 'primary', className = '', icon: Icon, disabled = false, type = 'button' }) => {
   const baseStyle = "flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed";
   const variants = {
@@ -56,9 +52,6 @@ const Card = ({ children, className = '' }) => (
   </div>
 );
 
-// --- Visões do App ---
-
-// 1. Dashboard Principal
 const Dashboard = ({ raffles, onCreateClick, onManageClick }) => {
   return (
     <div className="space-y-6">
@@ -123,7 +116,6 @@ const Dashboard = ({ raffles, onCreateClick, onManageClick }) => {
   );
 };
 
-// 2. Criar Nova Rifa
 const CreateRaffle = ({ onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -283,7 +275,6 @@ const CreateRaffle = ({ onSave, onCancel }) => {
   );
 };
 
-// 3. Administração da Rifa
 const AdminRaffle = ({ raffle, onBack, onOpenPublicView, onUpdateTicketStatus, onDelete }) => {
   const [toastMessage, setToastMessage] = useState('');
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -445,7 +436,7 @@ const AdminRaffle = ({ raffle, onBack, onOpenPublicView, onUpdateTicketStatus, o
         </Card>
       </div>
       
-      {/* Zona de Perigo */}
+      {/* Zona de Perigo com Confirmação Customizada no lugar de Alert */}
       {showConfirmDelete ? (
         <div className="mt-8 pt-6 border-t border-red-100 flex flex-col sm:flex-row gap-4 items-center justify-between bg-red-50 p-4 rounded-xl">
           <span className="text-red-700 font-medium">Tem certeza que deseja excluir esta rifa? Esta ação não pode ser desfeita.</span>
@@ -465,7 +456,6 @@ const AdminRaffle = ({ raffle, onBack, onOpenPublicView, onUpdateTicketStatus, o
   );
 };
 
-// 4. Visão Pública (Página de Vendas simulada)
 const PublicRaffleView = ({ raffle, onReserve, onBackToAdmin }) => {
   const [selectedTickets, setSelectedTickets] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -662,7 +652,6 @@ const PublicRaffleView = ({ raffle, onReserve, onBackToAdmin }) => {
   );
 };
 
-// --- App Principal ---
 export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [activeRaffleId, setActiveRaffleId] = useState(null);
