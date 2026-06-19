@@ -3,7 +3,8 @@ import {
   Ticket, PlusCircle, Users, ArrowLeft, 
   CheckCircle, TrendingUp, User, Phone, X, 
   Award, Copy, Trash2, ExternalLink,
-  ShoppingCart, AlertCircle, Lock, LogOut, Sparkles, Bot
+  ShoppingCart, AlertCircle, Lock, LogOut,
+  Bot, Sparkles
 } from 'lucide-react';
 
 // --- Importações do Firebase ---
@@ -22,13 +23,13 @@ import {
 const firebaseConfig = typeof __firebase_config !== 'undefined' 
   ? JSON.parse(__firebase_config) 
   : {
-  apiKey: "AIzaSyDa3x2I1_t6SRmxi2jbLL-HaV9Dk2U3TuU",
-  authDomain: "rifaai-61c2e.firebaseapp.com",
-  projectId: "rifaai-61c2e",
-  storageBucket: "rifaai-61c2e.firebasestorage.app",
-  messagingSenderId: "557459423486",
-  appId: "1:557459423486:web:8ee4abe36a78d2166e65af"
-  }
+      apiKey: "COLE_SUA_API_KEY_AQUI",
+      authDomain: "SEU_PROJETO.firebaseapp.com",
+      projectId: "SEU_PROJETO",
+      storageBucket: "SEU_PROJETO.appspot.com",
+      messagingSenderId: "SEU_SENDER_ID",
+      appId: "SEU_APP_ID"
+    };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -38,7 +39,6 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 // Define o caminho do banco de dados (Suporta o simulador e o seu projeto real)
 const getRafflesCol = () => {
   if (typeof __firebase_config !== 'undefined') {
-    // FIX: Ensure the path always has an odd number of segments to be a valid collection
     return collection(db, 'artifacts', appId, 'public_data', 'raffles_data', 'raffles');
   }
   return collection(db, 'raffles');
@@ -49,6 +49,19 @@ const BR_NAMES = [
   "Alice", "Miguel", "Sophia", "Arthur", "Helena", "Davi", "Valentina", "Heitor", "Laura", "Gabriel",
   "Isabella", "Bernardo", "Manuela", "Lorenzo", "Júlia", "Enzo", "Heloísa", "Pedro", "Luiza", "Lucas",
   "Maria Eduarda", "Matheus", "Lorena", "Kauã", "Lívia", "Isaac", "Giovanna", "Lucca", "Maria Luiza", "Rafael"
+];
+
+const BR_ANIMALS = [
+  "Leão", "Tigre", "Elefante", "Girafa", "Zebra", "Macaco", "Urso", "Lobo", "Raposa", "Coelho",
+  "Gato", "Cachorro", "Cavalo", "Vaca", "Porco", "Ovelha", "Cabra", "Galinha", "Pato", "Ganso",
+  "Peru", "Pombo", "Águia", "Falcão", "Coruja", "Papagaio", "Arara", "Tucano", "Pinguim", "Avestruz",
+  "Jacaré", "Crocodilo", "Tartaruga", "Cobra", "Lagarto", "Sapo", "Rã", "Peixe", "Tubarão", "Baleia",
+  "Golfinho", "Polvo", "Lula", "Caranguejo", "Lagosta", "Camarão", "Estrela-do-mar", "Ouriço", "Água-viva", "Coral",
+  "Borboleta", "Abelha", "Formiga", "Besouro", "Joaninha", "Aranha", "Escorpião", "Centopeia", "Minhoca", "Caracol",
+  "Lesma", "Morcego", "Rato", "Camundongo", "Esquilo", "Castor", "Porco-espinho", "Canguru", "Coala", "Panda",
+  "Gorila", "Chimpanzé", "Orangotango", "Hipopótamo", "Rinoceronte", "Camelo", "Dromedário", "Lhama", "Alpaca", "Rena",
+  "Alce", "Veado", "Antílope", "Búfalo", "Bisão", "Touro", "Jumento", "Mula", "Pônei", "Guepardo",
+  "Leopardo", "Pantera", "Lince", "Hiena", "Chacal", "Coiote", "Cão-selvagem", "Urso-polar", "Urso-pardo", "Urso-negro"
 ];
 
 const padNumber = (num, max) => {
@@ -130,16 +143,18 @@ const AdminLogin = ({ onBack }) => {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+            <label htmlFor="loginEmail" className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
             <input 
+              id="loginEmail" name="loginEmail"
               required type="email" placeholder="admin@rifadigital.com"
               className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
               value={email} onChange={e => setEmail(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+            <label htmlFor="loginPassword" className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
             <input 
+              id="loginPassword" name="loginPassword"
               required type="password" placeholder="••••••••"
               className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
               value={password} onChange={e => setPassword(e.target.value)}
@@ -283,8 +298,21 @@ const CreateRaffle = ({ onSave, onCancel }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiError, setAiError] = useState('');
 
+  // Estados de Configuração da API
+  const [showApiConfig, setShowApiConfig] = useState(false);
+  const [apiPin, setApiPin] = useState('');
+  const [isApiUnlocked, setIsApiUnlocked] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState(localStorage.getItem('gemini_api_key') || '');
+
   const handleAIGeneration = async () => {
     if (!aiPrompt.trim()) return;
+    
+    const savedKey = localStorage.getItem('gemini_api_key');
+    if (!savedKey) {
+        setAiError("Configure a chave da API (⚙️ Configurar Chave) antes de gerar.");
+        return;
+    }
+
     setIsGenerating(true);
     setAiError('');
     try {
@@ -299,19 +327,18 @@ const CreateRaffle = ({ onSave, onCancel }) => {
                     prize: { type: "STRING" },
                     description: { type: "STRING" },
                     price: { type: "NUMBER" },
-                    type: { type: "STRING", enum: ["numbers", "names"] },
+                    type: { type: "STRING", enum: ["numbers", "names", "animals"] },
                     totalTickets: { type: "NUMBER" }
                 },
                 required: ["title", "prize", "description", "price", "type", "totalTickets"]
             }
         },
         systemInstruction: {
-          parts: [{ text: "Você é um assistente especialista em criar campanhas de rifas digitais otimizadas para vendas. Baseado no motivo, prêmio ou objetivo fornecido pelo usuário, gere: 1. Um título muito cativante e curto. 2. O nome do prêmio. 3. Uma descrição altamente persuasiva com quebras de linha e uso de emojis para engajar os compradores. 4. Um preço acessível sugerido (como 5, 10, ou 15). 5. O tipo ideal ('numbers' para coisas maiores ou 'names' para coisas menores). 6. Quantidade de bilhetes (exatamente 50, 100, 200, 500 ou 1000)." }]
+          parts: [{ text: "Você é um assistente especialista em criar campanhas de rifas digitais otimizadas para vendas. Baseado no motivo, prêmio ou objetivo fornecido pelo usuário, gere: 1. Um título muito cativante e curto. 2. O nome do prêmio. 3. Uma descrição altamente persuasiva com quebras de linha e uso de emojis para engajar os compradores. 4. Um preço acessível sugerido (como 5, 10, ou 15). 5. O tipo ideal ('numbers' para coisas maiores, 'names' para rifas de pessoas, ou 'animals' para animais). 6. Quantidade de bilhetes (tente extrair a quantidade que o usuário pediu como 50, 100, 200, 500, ou decida o melhor)." }]
         }
       };
       
-      const apiKey = ""; 
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${savedKey}`;
       
       const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const result = await response.json();
@@ -323,18 +350,18 @@ const CreateRaffle = ({ onSave, onCancel }) => {
             prize: parsed.prize || '',
             description: parsed.description || '',
             price: parsed.price || '',
-            type: parsed.type === 'names' ? 'names' : 'numbers',
-            totalTickets: [50, 100, 200, 500, 1000].includes(parsed.totalTickets) ? parsed.totalTickets : 100,
+            type: ['names', 'animals'].includes(parsed.type) ? parsed.type : 'numbers',
+            totalTickets: parsed.totalTickets || 100,
             maxPerUser: formData.maxPerUser
          });
          setShowAI(false);
          setAiPrompt('');
       } else {
-         setAiError("Não conseguimos gerar as informações. Tente outro texto.");
+         setAiError("Não conseguimos gerar as informações. Verifique se a sua chave API é válida ou tente outro texto.");
       }
     } catch (err) {
       console.error(err);
-      setAiError("Ocorreu um erro ao conectar com o serviço de IA.");
+      setAiError("Ocorreu um erro ao conectar com o serviço de IA. Verifique sua chave API.");
     } finally {
       setIsGenerating(false);
     }
@@ -344,7 +371,6 @@ const CreateRaffle = ({ onSave, onCancel }) => {
     e.preventDefault();
     if (!formData.title || !formData.prize || !formData.price || !formData.totalTickets) return;
     
-    const isNames = formData.type === 'names';
     const newRaffle = {
       id: Date.now().toString(),
       ...formData,
@@ -352,15 +378,28 @@ const CreateRaffle = ({ onSave, onCancel }) => {
       totalTickets: parseInt(formData.totalTickets),
       maxPerUser: parseInt(formData.maxPerUser),
       createdAt: new Date().toISOString(),
-      tickets: Array.from({ length: parseInt(formData.totalTickets) }, (_, i) => ({
-        number: i + 1,
-        label: isNames ? BR_NAMES[i] || `Nome ${i+1}` : padNumber(i + 1, formData.totalTickets),
-        status: 'available',
-        buyerName: '',
-        buyerPhone: ''
-      }))
+      tickets: Array.from({ length: parseInt(formData.totalTickets) }, (_, i) => {
+        let label = padNumber(i + 1, formData.totalTickets);
+        if (formData.type === 'names') label = BR_NAMES[i] || `Nome ${i+1}`;
+        if (formData.type === 'animals') label = BR_ANIMALS[i] || `Animal ${i+1}`;
+        
+        return {
+          number: i + 1,
+          label: label,
+          status: 'available',
+          buyerName: '',
+          buyerPhone: ''
+        };
+      })
     };
     onSave(newRaffle);
+  };
+
+  const handleSaveApiKey = () => {
+    localStorage.setItem('gemini_api_key', apiKeyInput);
+    setShowApiConfig(false);
+    setIsApiUnlocked(false);
+    setApiPin('');
   };
 
   return (
@@ -386,10 +425,36 @@ const CreateRaffle = ({ onSave, onCancel }) => {
          <div className="mb-6 bg-purple-50 p-6 rounded-2xl border border-purple-200 shadow-sm transition-all">
             <div className="flex justify-between items-center mb-3">
                <h3 className="font-bold text-purple-900 flex items-center gap-2"><Bot size={18} /> Assistente Inteligente</h3>
-               <button onClick={() => setShowAI(false)} className="text-purple-400 hover:text-purple-700 transition-colors"><X size={18}/></button>
+               <div className="flex items-center gap-2">
+                 <button onClick={() => setShowApiConfig(!showApiConfig)} className="text-sm text-purple-600 hover:text-purple-800 bg-purple-100 px-2 py-1 rounded-md font-medium transition-colors">⚙️ Configurar Chave</button>
+                 <button onClick={() => setShowAI(false)} className="text-purple-400 hover:text-purple-700 transition-colors"><X size={18}/></button>
+               </div>
             </div>
+
+            {showApiConfig && (
+              <div className="bg-white p-4 rounded-xl border border-purple-100 mb-4 shadow-inner">
+                <h4 className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-2"><Lock size={14}/> Proteção de Chave API</h4>
+                
+                {!isApiUnlocked ? (
+                  <div className="flex gap-2">
+                    <input type="password" placeholder="Senha (ex: admin123)" className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none" value={apiPin} onChange={e => setApiPin(e.target.value)} />
+                    <Button onClick={() => { if(apiPin === 'admin123') { setIsApiUnlocked(true); } else { alert('Senha incorreta!'); } }} className="bg-purple-600 text-white text-sm">Desbloquear</Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <input type="text" placeholder="Cole sua chave Gemini API aqui (AIzaSy...)" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none" value={apiKeyInput} onChange={e => setApiKeyInput(e.target.value)} />
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="secondary" onClick={() => setShowApiConfig(false)} className="text-sm py-1.5">Cancelar</Button>
+                      <Button onClick={handleSaveApiKey} className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm py-1.5">Salvar Chave</Button>
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-gray-500 mt-2">A chave fica salva apenas no seu navegador. A senha padrão é <b>admin123</b>.</p>
+              </div>
+            )}
+
             <p className="text-sm text-purple-700 mb-4">
-              Descreva rapidamente o motivo da sua rifa ou o prêmio. Ex: <i>"Arrecadar fundos para a minha festa de formatura, sorteando um relógio de pulso."</i> ou <i>"Ajudar nos custos veterinários da minha gatinha."</i>
+              Descreva rapidamente o motivo da sua rifa ou o prêmio. Ex: <i>"Arrecadar fundos para a minha festa de formatura, sorteando um relógio com 100 animais."</i>
             </p>
             <textarea 
               rows="3" 
@@ -436,11 +501,12 @@ const CreateRaffle = ({ onSave, onCancel }) => {
                 value={formData.type}
                 onChange={e => {
                   const newType = e.target.value;
-                  setFormData({...formData, type: newType, totalTickets: newType === 'names' && formData.totalTickets > 100 ? 100 : formData.totalTickets});
+                  setFormData({...formData, type: newType, totalTickets: ['names', 'animals'].includes(newType) && formData.totalTickets > 100 ? 100 : formData.totalTickets});
                 }}
               >
                 <option value="numbers">Números</option>
                 <option value="names">Nomes</option>
+                <option value="animals">Animais</option>
               </select>
             </div>
           </div>
@@ -452,7 +518,7 @@ const CreateRaffle = ({ onSave, onCancel }) => {
               >
                 <option value={50}>50</option>
                 <option value={100}>100</option>
-                {formData.type === 'numbers' && (<><option value={200}>200</option><option value={500}>500</option></>)}
+                {formData.type === 'numbers' && (<><option value={200}>200</option><option value={500}>500</option><option value={1000}>1000</option></>)}
               </select>
             </div>
             <div>
@@ -494,14 +560,14 @@ const AdminRaffle = ({ raffle, onBack, onOpenPublicView, onUpdateTicketStatus, o
   const potentialRevenue = raffle.totalTickets * raffle.price;
 
   const handleCopyLink = () => {
-    // Monta o link único apontando para a página atual, adicionando o ID da rifa
-    const shareUrl = `${window.location.origin}${window.location.pathname}?raffle=${raffle.id}`;
+    // Cria um link único direcionando para a rifa específica
+    const baseUrl = window.location.origin;
+    const dummyUrl = `${baseUrl}/?raffle=${raffle.id}`;
+    
     if (navigator.clipboard) {
-        navigator.clipboard.writeText(shareUrl).then(() => {
-            setToastMessage('Link copiado! Agora é só compartilhar.');
+        navigator.clipboard.writeText(dummyUrl).then(() => {
+            setToastMessage('Link copiado com sucesso!');
             setTimeout(() => setToastMessage(''), 3000);
-        }).catch(err => {
-            console.error('Falha ao copiar:', err);
         });
     }
   };
@@ -523,7 +589,7 @@ const AdminRaffle = ({ raffle, onBack, onOpenPublicView, onUpdateTicketStatus, o
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={handleCopyLink} icon={Copy}>Copiar Link</Button>
+          <Button variant="secondary" onClick={handleCopyLink} icon={Copy}>Copiar Link Vendas</Button>
           <Button variant="primary" onClick={() => onOpenPublicView(raffle.id)} icon={ExternalLink}>Ver Página</Button>
         </div>
       </div>
@@ -659,8 +725,8 @@ const PublicRaffleView = ({ raffle, onReserve, onBack }) => {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 pb-24">
       <div className="max-w-4xl mx-auto flex justify-between items-center mb-4">
-        <button onClick={onBack} className="text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-medium">
-          <ArrowLeft size={18} /> Voltar para lista
+        <button onClick={onBack} className="text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-medium bg-white px-4 py-2 rounded-full shadow-sm border border-indigo-100 transition-all hover:shadow">
+          <ArrowLeft size={18} /> Ver outras rifas
         </button>
       </div>
 
@@ -676,7 +742,7 @@ const PublicRaffleView = ({ raffle, onReserve, onBack }) => {
             <Award size={18} /> Prêmio: {raffle.prize}
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">{raffle.title}</h1>
-          {raffle.description && <p className="text-gray-600 max-w-2xl mx-auto mb-6">{raffle.description}</p>}
+          {raffle.description && <p className="text-gray-600 max-w-2xl mx-auto mb-6 whitespace-pre-wrap">{raffle.description}</p>}
           
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 text-lg">
             <span className="bg-white border border-gray-200 px-6 py-3 rounded-xl font-bold text-gray-800 shadow-sm flex flex-col">
@@ -693,7 +759,7 @@ const PublicRaffleView = ({ raffle, onReserve, onBack }) => {
 
         <div className="p-6 md:p-10">
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-            <h2 className="text-xl font-bold text-gray-800">Escolha {raffle.type === 'names' ? 'os nomes' : 'os números'}</h2>
+            <h2 className="text-xl font-bold text-gray-800">Escolha os bilhetes abaixo</h2>
             <div className="flex gap-4 text-sm font-medium">
               <span className="flex items-center gap-2 text-emerald-600"><div className="w-4 h-4 rounded-full bg-emerald-100 border-2 border-emerald-500"></div> Livre</span>
               <span className="flex items-center gap-2 text-indigo-600"><div className="w-4 h-4 rounded-full bg-indigo-100 border-2 border-indigo-500"></div> Selecionado</span>
@@ -782,7 +848,6 @@ const PublicRaffleView = ({ raffle, onReserve, onBack }) => {
 export default function App() {
   const [currentView, setCurrentView] = useState('publicList');
   const [activeRaffleId, setActiveRaffleId] = useState(null);
-  const [initialRaffleLoaded, setInitialRaffleLoaded] = useState(false);
   
   // Estados do Firebase
   const [raffles, setRaffles] = useState([]);
@@ -806,8 +871,7 @@ export default function App() {
         }
       } catch (error) {
         console.error("Erro de autenticação:", error);
-        // FIX: Ensure we only store the string message, not the entire Error object
-        setAuthError(error?.message || "Erro desconhecido ao conectar ao Firebase.");
+        setAuthError(error.message);
         setLoading(false); // Para o loading infinito em caso de erro
       }
     };
@@ -819,10 +883,18 @@ export default function App() {
       // É admin apenas se não for um usuário anônimo
       if (currentUser && !currentUser.isAnonymous) {
         setIsAdmin(true);
-        setCurrentView('dashboard');
+        // Só muda para o dashboard se não estiver tentando acessar um link direto de rifa
+        const params = new URLSearchParams(window.location.search);
+        if (!params.get('raffle')) {
+            setCurrentView('dashboard');
+        }
       } else {
         setIsAdmin(false);
-        setCurrentView('publicList');
+      }
+
+      // Se não houver usuário (ex: erro no login anônimo), destrava o loading
+      if (!currentUser) {
+        setLoading(false);
       }
     });
 
@@ -841,26 +913,27 @@ export default function App() {
       // Ordena pelas mais recentes
       rafflesData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setRaffles(rafflesData);
-      setLoading(false);
-
-      // Trata o carregamento inicial de link direto (ex: site.com/?raffle=123)
-      if (!initialRaffleLoaded) {
-         const params = new URLSearchParams(window.location.search);
-         const raffleIdFromUrl = params.get('raffle');
-         if (raffleIdFromUrl && rafflesData.find(r => r.id === raffleIdFromUrl)) {
-             setActiveRaffleId(raffleIdFromUrl);
-             setCurrentView('publicRaffle');
-         }
-         setInitialRaffleLoaded(true);
+      
+      // Verifica se existe um parâmetro de rifa específica na URL (link direto)
+      const params = new URLSearchParams(window.location.search);
+      const raffleIdParam = params.get('raffle');
+      
+      if (raffleIdParam) {
+          const raffleExists = rafflesData.find(r => r.id === raffleIdParam);
+          if (raffleExists) {
+              setActiveRaffleId(raffleIdParam);
+              setCurrentView('publicRaffle');
+          }
       }
 
+      setLoading(false);
     }, (error) => {
       console.error("Erro ao buscar rifas:", error);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [user, initialRaffleLoaded]);
+  }, [user]);
 
   // Ações do Firebase
   const handleCreateRaffle = async (newRaffle) => {
@@ -880,7 +953,6 @@ export default function App() {
       setCurrentView('dashboard');
     } catch (e) {
       console.error("Erro ao deletar:", e);
-      alert("Erro ao excluir rifa: " + (e?.message || "Erro desconhecido"));
     }
   };
 
@@ -909,6 +981,28 @@ export default function App() {
     if (!raffle) return;
 
     const updatedTickets = raffle.tickets.map(t => 
+      t.number === ticketNumber ? { ...t, status: newStatus, buyerName: '', buyerPhone: '' } : t
+    );
+
+    try {
+      await updateDoc(doc(getRafflesCol(), raffleId), { tickets: updatedTickets });
+    } catch (e) {
+      console.error("Erro ao atualizar status:", e);
+    }
+  };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    // Volta a ser um usuário anônimo e vai para a lista pública
+    await signInAnonymously(auth).catch(e => console.error("Erro ao voltar para anônimo", e));
+    setCurrentView('publicList');
+  };
+
+  // Renderização principal
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-indigo-600 font-bold">Carregando sistema...</div>;
+  }
+
   if (authError) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
@@ -933,9 +1027,11 @@ export default function App() {
         raffle={raffles.find(r => r.id === activeRaffleId)} 
         onReserve={handleReserveTicket}
         onBack={() => {
-          // Limpa o parâmetro da URL ao clicar em voltar
-          window.history.pushState({}, '', window.location.pathname);
-          setCurrentView(isAdmin ? 'adminRaffle' : 'publicList');
+            // Remove o parâmetro ?raffle= da URL se existir ao voltar
+            if (window.location.search) {
+                window.history.pushState({}, '', window.location.pathname);
+            }
+            setCurrentView(isAdmin ? 'adminRaffle' : 'publicList');
         }}
       />
     );
@@ -947,7 +1043,10 @@ export default function App() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
           <div 
             className="flex items-center gap-2 font-bold text-xl cursor-pointer"
-            onClick={() => setCurrentView(isAdmin ? 'dashboard' : 'publicList')}
+            onClick={() => {
+              if (window.location.search) window.history.pushState({}, '', window.location.pathname);
+              setCurrentView(isAdmin ? 'dashboard' : 'publicList')
+            }}
           >
             <div className="bg-white p-1.5 rounded-lg text-indigo-600">
               <Ticket size={24} />
