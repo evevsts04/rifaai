@@ -23,13 +23,13 @@ import {
 const firebaseConfig = typeof __firebase_config !== 'undefined' 
   ? JSON.parse(__firebase_config) 
   : {
-      apiKey: "COLE_SUA_API_KEY_AQUI",
-      authDomain: "SEU_PROJETO.firebaseapp.com",
-      projectId: "SEU_PROJETO",
-      storageBucket: "SEU_PROJETO.appspot.com",
-      messagingSenderId: "SEU_SENDER_ID",
-      appId: "SEU_APP_ID"
-    };
+  apiKey: "AIzaSyDa3x2I1_t6SRmxi2jbLL-HaV9Dk2U3TuU",
+  authDomain: "rifaai-61c2e.firebaseapp.com",
+  projectId: "rifaai-61c2e",
+  storageBucket: "rifaai-61c2e.firebasestorage.app",
+  messagingSenderId: "557459423486",
+  appId: "1:557459423486:web:8ee4abe36a78d2166e65af"
+};
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
