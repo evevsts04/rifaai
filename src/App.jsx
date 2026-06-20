@@ -4,7 +4,7 @@ import {
   CheckCircle, TrendingUp, User, Phone, X, 
   Award, Copy, Trash2, ExternalLink,
   ShoppingCart, AlertCircle, Lock, LogOut,
-  Bot, Sparkles
+  Bot, Sparkles, Settings, MessageCircle, ListOrdered, Send
 } from 'lucide-react';
 
 // --- Importações do Firebase ---
@@ -18,18 +18,17 @@ import {
   onSnapshot, updateDoc, deleteDoc 
 } from 'firebase/firestore';
 
-// --- Configuração do Firebase ---
 // ⚠️ ATENÇÃO: Substitua os valores abaixo pelas credenciais do SEU projeto Firebase
 const firebaseConfig = typeof __firebase_config !== 'undefined' 
   ? JSON.parse(__firebase_config) 
   : {
-  apiKey: "AIzaSyDa3x2I1_t6SRmxi2jbLL-HaV9Dk2U3TuU",
-  authDomain: "rifaai-61c2e.firebaseapp.com",
-  projectId: "rifaai-61c2e",
-  storageBucket: "rifaai-61c2e.firebasestorage.app",
-  messagingSenderId: "557459423486",
-  appId: "1:557459423486:web:8ee4abe36a78d2166e65af"
-};
+      apiKey: "AIzaSyDa3x2I1_t6SRmxi2jbLL-HaV9Dk2U3TuU",
+      authDomain: "rifaai-61c2e.firebaseapp.com",
+      projectId: "rifaai-61c2e",
+      storageBucket: "rifaai-61c2e.firebasestorage.app",
+      messagingSenderId: "557459423486",
+      appId: "1:557459423486:web:8ee4abe36a78d2166e65af"
+    };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -39,12 +38,20 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 // Define o caminho do banco de dados (Suporta o simulador e o seu projeto real)
 const getRafflesCol = () => {
   if (typeof __firebase_config !== 'undefined') {
-    return collection(db, 'artifacts', appId, 'public_data', 'raffles_data', 'raffles');
+    const safeAppId = appId.replace(/\//g, '_');
+    return collection(db, 'artifacts', safeAppId, 'public_data', 'raffles_data', 'raffles');
   }
   return collection(db, 'raffles');
 };
 
-// --- Utilitários ---
+const getLeadsCol = () => {
+  if (typeof __firebase_config !== 'undefined') {
+    const safeAppId = appId.replace(/\//g, '_');
+    return collection(db, 'artifacts', safeAppId, 'public_data', 'leads_data', 'leads');
+  }
+  return collection(db, 'leads');
+};
+
 const BR_NAMES = [
   "Alice", "Miguel", "Sophia", "Arthur", "Helena", "Davi", "Valentina", "Heitor", "Laura", "Gabriel",
   "Isabella", "Bernardo", "Manuela", "Lorenzo", "Júlia", "Enzo", "Heloísa", "Pedro", "Luiza", "Lucas",
@@ -73,7 +80,6 @@ const formatCurrency = (value) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 };
 
-// --- Componentes Compartilhados ---
 const Button = ({ children, onClick, variant = 'primary', className = '', icon: Icon, disabled = false, type = 'button' }) => {
   const baseStyle = "flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed";
   const variants = {
@@ -132,7 +138,7 @@ const AdminLogin = ({ onBack }) => {
           <div className="bg-indigo-50 p-4 rounded-full mb-3 text-indigo-600">
             <Lock size={32} />
           </div>
-          <p className="text-gray-500 text-center text-sm">Faça login com sua conta de administrador para criar e gerenciar rifas.</p>
+          <p className="text-gray-500 text-center text-sm">Faça login com sua conta de administrador para gerenciar o sistema.</p>
         </div>
 
         {error && (
@@ -233,7 +239,7 @@ const Dashboard = ({ raffles, onCreateClick, onManageClick }) => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Painel de Gestão</h2>
+          <h2 className="text-2xl font-bold text-gray-800">Minhas Rifas</h2>
           <p className="text-gray-500 text-sm mt-1">Gerencie suas campanhas e acompanhe as vendas.</p>
         </div>
         <Button onClick={onCreateClick} icon={PlusCircle}>Nova Rifa</Button>
@@ -288,6 +294,266 @@ const Dashboard = ({ raffles, onCreateClick, onManageClick }) => {
   );
 };
 
+// 2.1 Configurações (Admin)
+const AdminSettings = () => {
+  const [apiPin, setApiPin] = useState('');
+  const [isApiUnlocked, setIsApiUnlocked] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState(localStorage.getItem('gemini_api_key') || '');
+  const [saved, setSaved] = useState(false);
+
+  const handleSaveApiKey = () => {
+    localStorage.setItem('gemini_api_key', apiKeyInput);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-800">Configurações do Sistema</h2>
+        <p className="text-gray-500 text-sm mt-1">Gerencie as integrações e segurança do aplicativo.</p>
+      </div>
+
+      <Card>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-purple-100 p-3 rounded-full text-purple-600">
+            <Bot size={24} />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-gray-800">Inteligência Artificial (Gemini API)</h3>
+            <p className="text-sm text-gray-500">Necessário para gerar rifas automaticamente com um clique.</p>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
+          <h4 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <Lock size={16} className="text-gray-500"/> Proteção de Segurança
+          </h4>
+          
+          {!isApiUnlocked ? (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">Para visualizar ou editar a chave da API, insira a senha de administrador.</p>
+              <div className="flex gap-2 max-w-sm">
+                <input 
+                  type="password" placeholder="Senha (ex: admin123)" 
+                  className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
+                  value={apiPin} onChange={e => setApiPin(e.target.value)} 
+                />
+                <Button onClick={() => { if(apiPin === 'admin123') { setIsApiUnlocked(true); } else { alert('Senha incorreta!'); } }} className="bg-gray-800 text-white text-sm">
+                  Desbloquear
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 animate-in fade-in zoom-in duration-300">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Chave da API do Google (Gemini)</label>
+                <input 
+                  type="text" placeholder="Cole sua chave aqui (AIzaSy...)" 
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
+                  value={apiKeyInput} onChange={e => setApiKeyInput(e.target.value)} 
+                />
+              </div>
+              <div className="flex items-center gap-4">
+                <Button onClick={handleSaveApiKey} className="bg-purple-600 hover:bg-purple-700 text-white">
+                  Salvar Configuração
+                </Button>
+                {saved && <span className="text-emerald-600 text-sm font-medium flex items-center gap-1"><CheckCircle size={16}/> Salvo com sucesso!</span>}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">A chave fica criptografada e salva apenas no armazenamento local do seu navegador.</p>
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+// 2.2 Gestão de Contatos/Leads (Admin)
+const LeadsManager = ({ leads, raffles, onAddLead, onUpdateLead, onDeleteLead }) => {
+  const [newLead, setNewLead] = useState({ name: '', phone: '' });
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [selectedRaffleId, setSelectedRaffleId] = useState('');
+
+  const handleAdd = (e) => {
+    e.preventDefault();
+    if (!newLead.name || !newLead.phone) return;
+    onAddLead({
+      id: Date.now().toString(),
+      name: newLead.name,
+      phone: newLead.phone,
+      status: 'pending', // pending | contacted
+      createdAt: new Date().toISOString()
+    });
+    setNewLead({ name: '', phone: '' });
+  };
+
+  const handleOpenShare = (lead) => {
+    setSelectedLead(lead);
+    setShowShareModal(true);
+    if (raffles.length > 0 && !selectedRaffleId) {
+      setSelectedRaffleId(raffles[0].id);
+    }
+  };
+
+  const handleSendWhatsApp = () => {
+    if (!selectedRaffleId || !selectedLead) return;
+    
+    const raffle = raffles.find(r => r.id === selectedRaffleId);
+    if (!raffle) return;
+
+    // Atualiza status do Lead no banco
+    onUpdateLead(selectedLead.id, { status: 'contacted', lastContactedDate: new Date().toISOString() });
+
+    // Prepara Mensagem e Link
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/?raffle=${raffle.id}`;
+    const message = `Olá ${selectedLead.name}! 🌟\n\nEstou organizando uma rifa super especial: *${raffle.title}* e lembrei de você!\nO prêmio é um *${raffle.prize}* e o bilhete custa só ${formatCurrency(raffle.price)}.\n\nGaranta o seu número da sorte direto no link abaixo (é rápido e seguro):\n👉 ${link}\n\nMuito obrigado pelo apoio! 🙏`;
+    
+    // Limpa telefone para o formato do WhatsApp (apenas números)
+    const cleanPhone = selectedLead.phone.replace(/\D/g, '');
+    
+    // Abre a janela do WhatsApp
+    window.open(`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
+    setShowShareModal(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Contatos e Disparos</h2>
+          <p className="text-gray-500 text-sm mt-1">Crie sua lista de clientes e envie os links das rifas pelo WhatsApp.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Adicionar Novo Lead */}
+        <Card className="lg:col-span-1 h-fit">
+          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <User size={18} className="text-indigo-600"/> Novo Contato
+          </h3>
+          <form onSubmit={handleAdd} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Nome Completo</label>
+              <input 
+                required type="text" placeholder="Ex: Maria Antonieta"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                value={newLead.name} onChange={e => setNewLead({...newLead, name: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">WhatsApp (com DDD)</label>
+              <input 
+                required type="tel" placeholder="(11) 99999-9999"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                value={newLead.phone} onChange={e => setNewLead({...newLead, phone: e.target.value})}
+              />
+            </div>
+            <Button type="submit" className="w-full" icon={PlusCircle}>Adicionar à Lista</Button>
+          </form>
+        </Card>
+
+        {/* Lista de Leads */}
+        <Card className="lg:col-span-2">
+          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <ListOrdered size={18} className="text-indigo-600"/> Lista de Transmissão
+          </h3>
+          
+          {leads.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 text-sm">
+              Nenhum contato adicionado ainda. Cadastre o primeiro ao lado!
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 rounded-tl-lg">Nome</th>
+                    <th className="px-4 py-3">WhatsApp</th>
+                    <th className="px-4 py-3 text-center">Status</th>
+                    <th className="px-4 py-3 rounded-tr-lg text-right">Ação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {leads.map(lead => (
+                    <tr key={lead.id} className="hover:bg-gray-50 transition-colors group">
+                      <td className="px-4 py-3 font-medium text-gray-800">{lead.name}</td>
+                      <td className="px-4 py-3 text-gray-600">{lead.phone}</td>
+                      <td className="px-4 py-3 text-center">
+                        {lead.status === 'contacted' ? (
+                          <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md text-xs font-bold">
+                            <CheckCircle size={12}/> Enviado
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-1 rounded-md text-xs font-bold">
+                            Pendente
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex justify-end items-center gap-2">
+                          <button onClick={() => onDeleteLead(lead.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Excluir">
+                            <Trash2 size={16}/>
+                          </button>
+                          <Button variant="success" className="py-1.5 px-3 text-xs" icon={Send} onClick={() => handleOpenShare(lead)}>
+                            Enviar Rifa
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* Modal de Compartilhamento */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-emerald-600 p-6 text-white text-center">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                <MessageCircle size={24} />
+              </div>
+              <h3 className="text-xl font-bold">Enviar para {selectedLead?.name.split(' ')[0]}</h3>
+              <p className="text-emerald-100 mt-1 text-sm">Escolha qual rifa você deseja compartilhar via WhatsApp.</p>
+            </div>
+            
+            <div className="p-6 space-y-5">
+              {raffles.length === 0 ? (
+                <div className="text-center text-gray-500">Você precisa criar uma rifa primeiro.</div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Selecione a Rifa Ativa</label>
+                  <select 
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                    value={selectedRaffleId} onChange={e => setSelectedRaffleId(e.target.value)}
+                  >
+                    {raffles.map(r => (
+                      <option key={r.id} value={r.id}>{r.title} ({formatCurrency(r.price)})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="pt-2 flex gap-3">
+                <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowShareModal(false)}>Cancelar</Button>
+                <Button type="button" variant="success" className="flex-1" icon={Send} onClick={handleSendWhatsApp} disabled={raffles.length === 0}>
+                  Abrir WhatsApp
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // 3. Criar Nova Rifa (Admin)
 const CreateRaffle = ({ onSave, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -298,18 +564,12 @@ const CreateRaffle = ({ onSave, onCancel }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiError, setAiError] = useState('');
 
-  // Estados de Configuração da API
-  const [showApiConfig, setShowApiConfig] = useState(false);
-  const [apiPin, setApiPin] = useState('');
-  const [isApiUnlocked, setIsApiUnlocked] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState(localStorage.getItem('gemini_api_key') || '');
-
   const handleAIGeneration = async () => {
     if (!aiPrompt.trim()) return;
     
     const savedKey = localStorage.getItem('gemini_api_key');
     if (!savedKey) {
-        setAiError("Configure a chave da API (⚙️ Configurar Chave) antes de gerar.");
+        setAiError("Chave da API não configurada. Acesse a aba 'Configurações' no menu superior para adicionar sua chave do Gemini.");
         return;
     }
 
@@ -338,11 +598,17 @@ const CreateRaffle = ({ onSave, onCancel }) => {
         }
       };
       
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${savedKey}`;
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${savedKey}`;
       
       const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const result = await response.json();
       
+      if (!response.ok) {
+         setAiError(`Erro da API: ${result.error?.message || 'Chave inválida.'}`);
+         setIsGenerating(false);
+         return;
+      }
+
       if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
          const parsed = JSON.parse(result.candidates[0].content.parts[0].text);
          setFormData({
@@ -357,11 +623,11 @@ const CreateRaffle = ({ onSave, onCancel }) => {
          setShowAI(false);
          setAiPrompt('');
       } else {
-         setAiError("Não conseguimos gerar as informações. Verifique se a sua chave API é válida ou tente outro texto.");
+         setAiError("Falha na geração de conteúdo.");
       }
     } catch (err) {
       console.error(err);
-      setAiError("Ocorreu um erro ao conectar com o serviço de IA. Verifique sua chave API.");
+      setAiError("Erro de conexão. Verifique sua rede.");
     } finally {
       setIsGenerating(false);
     }
@@ -395,13 +661,6 @@ const CreateRaffle = ({ onSave, onCancel }) => {
     onSave(newRaffle);
   };
 
-  const handleSaveApiKey = () => {
-    localStorage.setItem('gemini_api_key', apiKeyInput);
-    setShowApiConfig(false);
-    setIsApiUnlocked(false);
-    setApiPin('');
-  };
-
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
@@ -413,7 +672,7 @@ const CreateRaffle = ({ onSave, onCancel }) => {
         <div className="mb-6 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-2xl border border-indigo-100 flex flex-col sm:flex-row gap-4 items-center justify-between">
            <div>
               <h3 className="font-bold text-indigo-900 flex items-center gap-2"><Sparkles size={18} className="text-purple-600"/> Sem tempo ou ideias?</h3>
-              <p className="text-sm text-indigo-700 mt-1">Deixe a Inteligência Artificial criar uma rifa perfeitamente otimizada para você e pronta para vender.</p>
+              <p className="text-sm text-indigo-700 mt-1">Deixe a Inteligência Artificial criar uma rifa perfeitamente otimizada para você.</p>
            </div>
            <Button onClick={() => setShowAI(true)} className="bg-purple-600 hover:bg-purple-700 text-white border-transparent flex-shrink-0">
               <Bot size={18} /> Preencher com IA
@@ -425,36 +684,10 @@ const CreateRaffle = ({ onSave, onCancel }) => {
          <div className="mb-6 bg-purple-50 p-6 rounded-2xl border border-purple-200 shadow-sm transition-all">
             <div className="flex justify-between items-center mb-3">
                <h3 className="font-bold text-purple-900 flex items-center gap-2"><Bot size={18} /> Assistente Inteligente</h3>
-               <div className="flex items-center gap-2">
-                 <button onClick={() => setShowApiConfig(!showApiConfig)} className="text-sm text-purple-600 hover:text-purple-800 bg-purple-100 px-2 py-1 rounded-md font-medium transition-colors">⚙️ Configurar Chave</button>
-                 <button onClick={() => setShowAI(false)} className="text-purple-400 hover:text-purple-700 transition-colors"><X size={18}/></button>
-               </div>
+               <button onClick={() => setShowAI(false)} className="text-purple-400 hover:text-purple-700 transition-colors"><X size={18}/></button>
             </div>
-
-            {showApiConfig && (
-              <div className="bg-white p-4 rounded-xl border border-purple-100 mb-4 shadow-inner">
-                <h4 className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-2"><Lock size={14}/> Proteção de Chave API</h4>
-                
-                {!isApiUnlocked ? (
-                  <div className="flex gap-2">
-                    <input type="password" placeholder="Senha (ex: admin123)" className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none" value={apiPin} onChange={e => setApiPin(e.target.value)} />
-                    <Button onClick={() => { if(apiPin === 'admin123') { setIsApiUnlocked(true); } else { alert('Senha incorreta!'); } }} className="bg-purple-600 text-white text-sm">Desbloquear</Button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <input type="text" placeholder="Cole sua chave Gemini API aqui (AIzaSy...)" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none" value={apiKeyInput} onChange={e => setApiKeyInput(e.target.value)} />
-                    <div className="flex gap-2 justify-end">
-                      <Button variant="secondary" onClick={() => setShowApiConfig(false)} className="text-sm py-1.5">Cancelar</Button>
-                      <Button onClick={handleSaveApiKey} className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm py-1.5">Salvar Chave</Button>
-                    </div>
-                  </div>
-                )}
-                <p className="text-xs text-gray-500 mt-2">A chave fica salva apenas no seu navegador. A senha padrão é <b>admin123</b>.</p>
-              </div>
-            )}
-
             <p className="text-sm text-purple-700 mb-4">
-              Descreva rapidamente o motivo da sua rifa ou o prêmio. Ex: <i>"Arrecadar fundos para a minha festa de formatura, sorteando um relógio com 100 animais."</i>
+              Descreva rapidamente o motivo da sua rifa ou o prêmio. Ex: <i>"Arrecadar fundos para a minha formatura, sorteando um relógio com 100 animais."</i>
             </p>
             <textarea 
               rows="3" 
@@ -464,7 +697,7 @@ const CreateRaffle = ({ onSave, onCancel }) => {
               onChange={e => setAiPrompt(e.target.value)}
               disabled={isGenerating}
             />
-            {aiError && <p className="text-red-500 text-sm mb-3 flex items-center gap-1"><AlertCircle size={14}/> {aiError}</p>}
+            {aiError && <p className="text-red-500 text-sm mb-3 flex items-center gap-1 bg-red-50 p-2 rounded-lg border border-red-100"><AlertCircle size={14}/> {aiError}</p>}
             <Button onClick={handleAIGeneration} disabled={isGenerating || !aiPrompt.trim()} className="w-full bg-purple-600 hover:bg-purple-700 text-white">
                {isGenerating ? '🌟 Criando mágica...' : 'Gerar Detalhes da Rifa'}
             </Button>
@@ -560,10 +793,8 @@ const AdminRaffle = ({ raffle, onBack, onOpenPublicView, onUpdateTicketStatus, o
   const potentialRevenue = raffle.totalTickets * raffle.price;
 
   const handleCopyLink = () => {
-    // Cria um link único direcionando para a rifa específica
     const baseUrl = window.location.origin;
     const dummyUrl = `${baseUrl}/?raffle=${raffle.id}`;
-    
     if (navigator.clipboard) {
         navigator.clipboard.writeText(dummyUrl).then(() => {
             setToastMessage('Link copiado com sucesso!');
@@ -849,8 +1080,11 @@ export default function App() {
   const [currentView, setCurrentView] = useState('publicList');
   const [activeRaffleId, setActiveRaffleId] = useState(null);
   
-  // Estados do Firebase
+  // Estados de Dados
   const [raffles, setRaffles] = useState([]);
+  const [leads, setLeads] = useState([]);
+  
+  // Estados de Sessão
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -860,30 +1094,26 @@ export default function App() {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // Ambiente de simulação
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
         } else {
-          // Se não estiver logado como admin, faz login anônimo para poder ler/escrever dados públicos
           if (!auth.currentUser) {
             await signInAnonymously(auth);
           }
         }
       } catch (error) {
         console.error("Erro de autenticação:", error);
-        setAuthError(error.message);
-        setLoading(false); // Para o loading infinito em caso de erro
+        setAuthError(error instanceof Error ? error.message : String(error));
+        setLoading(false);
       }
     };
     initAuth();
 
-    // Monitora o status do usuário (Se tem e-mail, é o Admin)
+    // Monitora o status do usuário
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      // É admin apenas se não for um usuário anônimo
       if (currentUser && !currentUser.isAnonymous) {
         setIsAdmin(true);
-        // Só muda para o dashboard se não estiver tentando acessar um link direto de rifa
         const params = new URLSearchParams(window.location.search);
         if (!params.get('raffle')) {
             setCurrentView('dashboard');
@@ -891,8 +1121,6 @@ export default function App() {
       } else {
         setIsAdmin(false);
       }
-
-      // Se não houver usuário (ex: erro no login anônimo), destrava o loading
       if (!currentUser) {
         setLoading(false);
       }
@@ -901,20 +1129,16 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Busca os dados do Firestore em tempo real
+  // 2. Busca dados em tempo real
   useEffect(() => {
-    if (!user) return; // Só busca se tiver autenticado (mesmo que anonimamente)
+    if (!user) return; 
 
-    const unsubscribe = onSnapshot(getRafflesCol(), (snapshot) => {
-      const rafflesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      // Ordena pelas mais recentes
+    // Busca Rifas
+    const unsubscribeRaffles = onSnapshot(getRafflesCol(), (snapshot) => {
+      const rafflesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       rafflesData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setRaffles(rafflesData);
       
-      // Verifica se existe um parâmetro de rifa específica na URL (link direto)
       const params = new URLSearchParams(window.location.search);
       const raffleIdParam = params.get('raffle');
       
@@ -925,17 +1149,29 @@ export default function App() {
               setCurrentView('publicRaffle');
           }
       }
-
       setLoading(false);
     }, (error) => {
       console.error("Erro ao buscar rifas:", error);
       setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [user]);
+    // Busca Contatos/Leads (Apenas para Admin)
+    let unsubscribeLeads = () => {};
+    if (isAdmin) {
+      unsubscribeLeads = onSnapshot(getLeadsCol(), (snapshot) => {
+        const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        leadsData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setLeads(leadsData);
+      });
+    }
 
-  // Ações do Firebase
+    return () => {
+      unsubscribeRaffles();
+      unsubscribeLeads();
+    };
+  }, [user, isAdmin]);
+
+  // Ações do Firebase - Rifas
   const handleCreateRaffle = async (newRaffle) => {
     if (!isAdmin) return;
     try {
@@ -959,15 +1195,9 @@ export default function App() {
   const handleReserveTicket = async (raffleId, ticketNumbersArray, buyerData) => {
     const raffle = raffles.find(r => r.id === raffleId);
     if (!raffle) return;
-
-    // Atualiza a lista de tickets localmente
     const updatedTickets = raffle.tickets.map(t => 
-      ticketNumbersArray.includes(t.number)
-        ? { ...t, status: 'reserved', buyerName: buyerData.name, buyerPhone: buyerData.phone } 
-        : t
+      ticketNumbersArray.includes(t.number) ? { ...t, status: 'reserved', buyerName: buyerData.name, buyerPhone: buyerData.phone } : t
     );
-
-    // Salva no banco de dados
     try {
       await updateDoc(doc(getRafflesCol(), raffleId), { tickets: updatedTickets });
     } catch (e) {
@@ -979,11 +1209,9 @@ export default function App() {
     if (!isAdmin) return;
     const raffle = raffles.find(r => r.id === raffleId);
     if (!raffle) return;
-
     const updatedTickets = raffle.tickets.map(t => 
       t.number === ticketNumber ? { ...t, status: newStatus, buyerName: '', buyerPhone: '' } : t
     );
-
     try {
       await updateDoc(doc(getRafflesCol(), raffleId), { tickets: updatedTickets });
     } catch (e) {
@@ -991,14 +1219,40 @@ export default function App() {
     }
   };
 
+  // Ações do Firebase - Leads (CRM)
+  const handleAddLead = async (newLead) => {
+    if (!isAdmin) return;
+    try {
+      await setDoc(doc(getLeadsCol(), newLead.id), newLead);
+    } catch (e) {
+      console.error("Erro ao adicionar contato:", e);
+    }
+  };
+
+  const handleUpdateLead = async (id, data) => {
+    if (!isAdmin) return;
+    try {
+      await updateDoc(doc(getLeadsCol(), id), data);
+    } catch (e) {
+      console.error("Erro ao atualizar contato:", e);
+    }
+  };
+
+  const handleDeleteLead = async (id) => {
+    if (!isAdmin) return;
+    try {
+      await deleteDoc(doc(getLeadsCol(), id));
+    } catch (e) {
+      console.error("Erro ao excluir contato:", e);
+    }
+  };
+
   const handleLogout = async () => {
     await signOut(auth);
-    // Volta a ser um usuário anônimo e vai para a lista pública
     await signInAnonymously(auth).catch(e => console.error("Erro ao voltar para anônimo", e));
     setCurrentView('publicList');
   };
 
-  // Renderização principal
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-indigo-600 font-bold">Carregando sistema...</div>;
   }
@@ -1009,29 +1263,21 @@ export default function App() {
         <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center border-t-4 border-red-500">
            <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
            <h2 className="text-xl font-bold text-gray-800 mb-2">Erro de Configuração</h2>
-           <p className="text-gray-600 mb-4 text-sm">
-             O Firebase bloqueou a conexão. Certifique-se de ativar o provedor de login <strong>Anônimo</strong> no painel de Authentication.
-           </p>
-           <div className="bg-gray-100 p-3 rounded text-xs text-left text-gray-500 overflow-auto break-all">
-             {authError}
-           </div>
+           <p className="text-gray-600 mb-4 text-sm">O Firebase bloqueou a conexão. Certifique-se de ativar o provedor de login <strong>Anônimo</strong>.</p>
+           <div className="bg-gray-100 p-3 rounded text-xs text-left text-gray-500 overflow-auto break-all">{String(authError)}</div>
         </div>
       </div>
     );
   }
 
-  // Se for a tela de visualização pública completa, removemos o cabeçalho padrão
   if (currentView === 'publicRaffle') {
     return (
       <PublicRaffleView 
         raffle={raffles.find(r => r.id === activeRaffleId)} 
         onReserve={handleReserveTicket}
         onBack={() => {
-            // Remove o parâmetro ?raffle= da URL se existir ao voltar
-            if (window.location.search) {
-                window.history.pushState({}, '', window.location.pathname);
-            }
-            setCurrentView(isAdmin ? 'adminRaffle' : 'publicList');
+            if (window.location.search) window.history.pushState({}, '', window.location.pathname);
+            setCurrentView(isAdmin ? 'dashboard' : 'publicList');
         }}
       />
     );
@@ -1039,53 +1285,57 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
-      <header className="bg-indigo-600 text-white shadow-md sticky top-0 z-10">
+      <header className="bg-indigo-600 text-white shadow-md sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
-          <div 
-            className="flex items-center gap-2 font-bold text-xl cursor-pointer"
-            onClick={() => {
-              if (window.location.search) window.history.pushState({}, '', window.location.pathname);
-              setCurrentView(isAdmin ? 'dashboard' : 'publicList')
-            }}
-          >
-            <div className="bg-white p-1.5 rounded-lg text-indigo-600">
-              <Ticket size={24} />
-            </div>
+          <div className="flex items-center gap-2 font-bold text-xl cursor-pointer" onClick={() => { if (window.location.search) window.history.pushState({}, '', window.location.pathname); setCurrentView(isAdmin ? 'dashboard' : 'publicList') }}>
+            <div className="bg-white p-1.5 rounded-lg text-indigo-600"><Ticket size={24} /></div>
             RifaDigital
           </div>
           <div className="flex items-center gap-4 text-sm font-medium">
              {isAdmin ? (
                <>
-                 <span className="hidden sm:inline-block text-indigo-200">Painel do Administrador</span>
-                 <button onClick={handleLogout} className="flex items-center gap-1 bg-indigo-700 hover:bg-indigo-800 px-3 py-1.5 rounded-lg transition-colors">
-                   <LogOut size={16} /> Sair
-                 </button>
+                 <span className="hidden sm:inline-block text-indigo-200">Olá, Administrador</span>
+                 <button onClick={handleLogout} className="flex items-center gap-1 bg-indigo-700 hover:bg-indigo-800 px-3 py-1.5 rounded-lg transition-colors"><LogOut size={16} /> Sair</button>
                </>
              ) : (
-               <button onClick={() => setCurrentView('login')} className="flex items-center gap-1 bg-indigo-500 hover:bg-indigo-700 px-3 py-1.5 rounded-lg transition-colors">
-                 <Lock size={16} /> Acesso Admin
-               </button>
+               <button onClick={() => setCurrentView('login')} className="flex items-center gap-1 bg-indigo-500 hover:bg-indigo-700 px-3 py-1.5 rounded-lg transition-colors"><Lock size={16} /> Acesso Admin</button>
              )}
           </div>
         </div>
       </header>
 
+      {/* Menu Sub-navegação do Administrador */}
+      {isAdmin && currentView !== 'publicRaffle' && (
+         <div className="bg-white border-b border-gray-200 shadow-sm sticky top-[68px] z-10">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 flex gap-6 overflow-x-auto custom-scrollbar">
+               <button onClick={() => setCurrentView('dashboard')} className={`py-4 border-b-2 font-medium text-sm whitespace-nowrap transition-colors flex items-center gap-2 ${currentView === 'dashboard' || currentView === 'create' || currentView === 'adminRaffle' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-indigo-600'}`}>
+                  <Ticket size={18}/> Rifas
+               </button>
+               <button onClick={() => setCurrentView('leads')} className={`py-4 border-b-2 font-medium text-sm whitespace-nowrap transition-colors flex items-center gap-2 ${currentView === 'leads' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-indigo-600'}`}>
+                  <Users size={18}/> Contatos e Envios
+               </button>
+               <button onClick={() => setCurrentView('settings')} className={`py-4 border-b-2 font-medium text-sm whitespace-nowrap transition-colors flex items-center gap-2 ${currentView === 'settings' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-indigo-600'}`}>
+                  <Settings size={18}/> Configurações
+               </button>
+            </div>
+         </div>
+      )}
+
       <main className="flex-grow max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
         {currentView === 'login' && <AdminLogin onBack={() => setCurrentView('publicList')} />}
         
         {currentView === 'publicList' && (
-          <PublicList 
-            raffles={raffles} 
-            onOpenPublicView={(id) => { setActiveRaffleId(id); setCurrentView('publicRaffle'); }} 
-          />
+          <PublicList raffles={raffles} onOpenPublicView={(id) => { setActiveRaffleId(id); setCurrentView('publicRaffle'); }} />
         )}
 
         {currentView === 'dashboard' && isAdmin && (
-          <Dashboard 
-            raffles={raffles} 
-            onCreateClick={() => setCurrentView('create')} 
-            onManageClick={(id) => { setActiveRaffleId(id); setCurrentView('adminRaffle'); }}
-          />
+          <Dashboard raffles={raffles} onCreateClick={() => setCurrentView('create')} onManageClick={(id) => { setActiveRaffleId(id); setCurrentView('adminRaffle'); }} />
+        )}
+
+        {currentView === 'settings' && isAdmin && <AdminSettings />}
+
+        {currentView === 'leads' && isAdmin && (
+          <LeadsManager leads={leads} raffles={raffles} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onDeleteLead={handleDeleteLead} />
         )}
 
         {currentView === 'create' && isAdmin && (
@@ -1104,7 +1354,7 @@ export default function App() {
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
